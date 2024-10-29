@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>오늘의 운세 챗봇</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .chat-container {
+            width: 100%;
+            max-width: 500px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .chat-header {
+            background: #4a90e2;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+
+        .chat-messages {
+            height: 400px;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .message.bot {
+            align-items: flex-start;
+        }
+
+        .message.user {
+            align-items: flex-end;
+        }
+
+        .message-content {
+            max-width: 80%;
+            padding: 10px 15px;
+            border-radius: 15px;
+            font-size: 0.9em;
+            margin: 5px 0;
+        }
+
+        .bot .message-content {
+            background: #f0f2f5;
+        }
+
+        .user .message-content {
+            background: #4a90e2;
+            color: white;
+        }
+
+        .chat-input {
+            display: flex;
+            padding: 20px;
+            border-top: 1px solid #eee;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            margin-right: 10px;
+            font-size: 0.9em;
+        }
+
+        button {
+            padding: 10px 20px;
+            background: #4a90e2;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background: #357abd;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 10px;
+            font-style: italic;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            🔮 오늘의 운세
+        </div>
+        <div class="chat-messages" id="chatMessages">
+            <div class="message bot">
+                <div class="message-content">
+                    안녕하세요! 오늘의 운세를 알려드릴게요. 궁금하신 운세 종류를 선택해주세요:
+                    1. 오늘의 총운
+                    2. 오늘의 금전운
+                    3. 오늘의 연애운
+                </div>
+            </div>
+        </div>
+        <div class="loading" id="loading">
+            답변을 생성중입니다...
+        </div>
+        <div class="chat-input">
+            <input type="text" id="userInput" placeholder="메시지를 입력하세요...">
+            <button onclick="sendMessage()">전송</button>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:3000/api/fortune';
+
+        async function getFortune(type) {
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ type })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('API 요청 실패');
+                }
+                
+                const data = await response.json();
+                return data.fortune;
+            } catch (error) {
+                console.error('API 요청 오류:', error);
+                return '죄송합니다. 일시적인 오류가 발생했습니다.';
+            }
+        }
+
+        async function processUserInput(input) {
+            const cleanInput = input.trim();
+            let fortuneType;
+            
+            if (cleanInput === "1" || cleanInput.includes("총운")) {
+                fortuneType = "총운";
+            } else if (cleanInput === "2" || cleanInput.includes("금전")) {
+                fortuneType = "금전운";
+            } else if (cleanInput === "3" || cleanInput.includes("연애")) {
+                fortuneType = "연애운";
+            } else {
+                return "1, 2, 3 중에서 선택하시거나, '총운', '금전운', '연애운' 중 하나를 입력해주세요.";
+            }
+
+            return await getFortune(fortuneType);
+        }
+
+        function addMessage(message, isUser = false) {
+            const chatMessages = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user' : 'bot'}`;
+            messageDiv.innerHTML = `
+                <div class="message-content">
+                    ${message}
+                </div>
+            `;
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function showLoading(show) {
+            const loading = document.getElementById('loading');
+            loading.style.display = show ? 'block' : 'none';
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('userInput');
+            const message = input.value.trim();
+            
+            if (message) {
+                addMessage(message, true);
+                input.value = '';
+                showLoading(true);
+                
+                const response = await processUserInput(message);
+                showLoading(false);
+                setTimeout(() => addMessage(response), 500);
+            }
+        }
+
+        document.getElementById('userInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html>
