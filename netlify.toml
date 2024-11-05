@@ -1,0 +1,4 @@
+[build]
+  functions = "netlify/functions"
+  command = "npm run build"    # 필요한 빌드 명령어로 변경
+  publish = "build"            # 프론트엔드 빌드 폴더 (예: build 또는 docs)
